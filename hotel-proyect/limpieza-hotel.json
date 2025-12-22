@@ -1,0 +1,463 @@
+{
+  "name": "limpieza-hotel",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1264,
+        32
+      ],
+      "id": "6c98051d-d5aa-4c52-b4e2-c89bb071cf81",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE TABLE conversaciones_dia;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -768,
+        32
+      ],
+      "id": "2d266c82-606c-4ba9-b839-850aeb173476",
+      "name": "borrar-estadisticas",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE TABLE en_espera;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -624,
+        32
+      ],
+      "id": "1a8abf7a-f807-4379-a5ea-e2ba263bb16b",
+      "name": "borrar-soporte",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "faa8e044-4298-49dd-975e-24d4f98acfc0",
+              "leftValue": "=new Date($json.currentDate).getDay()",
+              "rightValue": "0",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -480,
+        32
+      ],
+      "id": "403fe20b-545e-4580-9a29-137d140a3431",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COUNT(*) AS total,\n  COUNT(*) FILTER (WHERE spam = true) AS spam,\n  COUNT(*) FILTER (WHERE soporte = true) AS soporte,\n  COUNT(*) FILTER (WHERE relevante = true) AS relevante,\n  COUNT(*) FILTER (WHERE pendiente = true) AS pendiente\nFROM conversaciones_dia;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1104,
+        32
+      ],
+      "id": "4993e55f-a280-4e8f-934d-55e2eb4b32b4",
+      "name": "contar-estadisticas1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const textos = items.map(item => item.json.content.trim()).filter(Boolean);\nreturn [\n  {\n    json: {\n      resumen: textos.join('\\n\\n')\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -32
+      ],
+      "id": "e97f890f-5649-493b-9087-7bb03b25d90e",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.resumen }}",
+        "options": {
+          "systemMessage": "=Eres un asistente inteligente de análisis de conversaciones para un sistema de atención al cliente por WhatsApp. A continuación te proporciono una lista de mensajes enviados por los usuarios durante el día de hoy.\n\nTu tarea es:\n1. Analizar el contenido y detectar temas frecuentes, preguntas comunes, problemas o solicitudes destacadas.\n2. Generar un resumen **claro y organizado por secciones temáticas**, usando viñetas o párrafos breves.\n3. Usar **emojis relevantes** para mejorar la presentación y hacerlo visualmente más atractivo.\n4. **No uses comillas** alrededor del texto ni de los mensajes.\n5. No repitas los mensajes exactos, solo interpreta y resume lo importante.\n\n🔔 Entrega el resumen en un formato legible, como si fuera un informe para el equipo de soporte. Usa subtítulos en negrita, íconos y separación clara entre secciones. Sé amable y profesional.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        64,
+        -32
+      ],
+      "id": "acca30c8-c2a5-4987-af24-6f278b532243",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        64,
+        128
+      ],
+      "id": "eb736f50-42d7-4d16-888e-fbe269eb741d",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "XpDEHPXQpV2b5yz1",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=6580829248",
+        "text": "=🧹 Limpieza diaria completada con éxito.\n\n🗂️ Se han eliminado los registros de:\n• Números en soporte\n• Estadísticas de conversaciones del día\n\n✅ El sistema está listo para una nueva jornada.\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        160
+      ],
+      "id": "8768dc1b-44b2-40b9-ad53-f57cf9700a7e",
+      "name": "limpieza-diaria",
+      "webhookId": "84fce957-3c42-4375-893e-1b29277967f6",
+      "credentials": {
+        "telegramApi": {
+          "id": "TYAzjxj9j4etWB5i",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=6580829248",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        -32
+      ],
+      "id": "10319715-9117-47c3-bc76-d3961be8f24d",
+      "name": "resumen-semana",
+      "webhookId": "84fce957-3c42-4375-893e-1b29277967f6",
+      "credentials": {
+        "telegramApi": {
+          "id": "TYAzjxj9j4etWB5i",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=6580829248",
+        "text": "=🧹 *Limpieza diaria y semanal completada*\n\n🗑️ Todas las conversaciones de la semana han sido eliminadas de la base de datos `n8n_chat_histories`.\n🗂️ Se han eliminado los registros de:\n• Números en soporte\n• Estadísticas de conversaciones del día\n\n🕐 ¡Listo para comenzar una nueva semana organizada! 🚀\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        -32
+      ],
+      "id": "e6777c4f-1bbd-4fbd-b2e7-7a27bec3e8f4",
+      "name": "limpieza-semanal",
+      "webhookId": "84fce957-3c42-4375-893e-1b29277967f6",
+      "credentials": {
+        "telegramApi": {
+          "id": "TYAzjxj9j4etWB5i",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=6580829248",
+        "text": "=📊 *Estadísticas del dia:\n\n🔢 Total de conversaciones: {{ $json.total }}\n🛠️ Soporte: {{ $json.soporte }}\n📬 Relevantes: {{ $json.relevante }}\n📌 Pendientes: {{ $json.pendiente }}\n🚫 Spam: {{ $json.spam }}\n\n¡Gracias por tu excelente trabajo hoy! 💪",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -960,
+        32
+      ],
+      "id": "dc03a65c-0c3b-4ebf-84d6-f464d2f64df3",
+      "name": "estadisticas",
+      "webhookId": "84fce957-3c42-4375-893e-1b29277967f6",
+      "credentials": {
+        "telegramApi": {
+          "id": "TYAzjxj9j4etWB5i",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT message->>'content' AS content\nFROM n8n_chat_histories\nWHERE message->>'type' = 'human'\nORDER BY id DESC\nLIMIT 20;\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -256,
+        -32
+      ],
+      "id": "747608fa-6c4b-4dd7-a928-4f2f55a7e438",
+      "name": "consultar-chat",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE TABLE n8n_chat_histories;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        -32
+      ],
+      "id": "1042b443-5360-4d85-a460-39cc33381662",
+      "name": "limpiar-chats",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "contar-estadisticas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "borrar-estadisticas": {
+      "main": [
+        [
+          {
+            "node": "borrar-soporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "borrar-soporte": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "consultar-chat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "limpieza-diaria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contar-estadisticas1": {
+      "main": [
+        [
+          {
+            "node": "estadisticas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "limpiar-chats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "resumen-semana": {
+      "main": [
+        [
+          {
+            "node": "limpieza-semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "estadisticas": {
+      "main": [
+        [
+          {
+            "node": "borrar-estadisticas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar-chat": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limpiar-chats": {
+      "main": [
+        [
+          {
+            "node": "resumen-semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0bd36c0e-a09e-4383-a7e5-7bb4d405668e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1ba61dde2cd93cbe58daac983d4e6adbbd26cdb7234ab9094e5a6df0ba3f1063"
+  },
+  "id": "4D3zoYB7k8H5oOLO",
+  "tags": []
+}

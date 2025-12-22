@@ -1,0 +1,1243 @@
+{
+  "name": "sub-text-hotel",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.17.42.196:8080/message/sendText/{{ $json.instancia }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=apikey ",
+              "value": "={{ $json.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.identifier }}"
+            },
+            {
+              "name": "text",
+              "value": "=Verifica que los datos estén completos y correctos."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        528
+      ],
+      "id": "40376fba-eeba-4a41-af09-304ddd0f423b",
+      "name": "send-error"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.17.42.196:8080/message/sendText/{{ $json.instancia }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=apikey ",
+              "value": "={{ $json.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.identifier }}"
+            },
+            {
+              "name": "text",
+              "value": "=Lo siento 😅,tu mensaje es irrelevante para el ambito actual 💬✨"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        384
+      ],
+      "id": "14378fd0-bd6b-46d5-8a8a-ad6be5740211",
+      "name": "send-irrelevante"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "effd9b88-4ed3-4cac-b26c-7e29fe65ea3f",
+              "name": "response",
+              "value": "={{ $('Redis-get-messages').item.json.message.reverse().join('\\n') }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        592
+      ],
+      "id": "87107530-838f-49ab-a4ab-a48f87bee2fa",
+      "name": "mensajes-agrupados"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        656
+      ],
+      "id": "e0071431-4f21-43ff-9b7b-8af3dee21b20",
+      "name": "Wait",
+      "webhookId": "1d074ff5-25b6-49c2-b35f-8094022a61b2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.17.42.196:8080/message/sendText/{{ $('sub-text').item.json.instancia }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('sub-text').item.json.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "="
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2128,
+        96
+      ],
+      "id": "cd8350bc-af87-49e6-89fc-2092fa36a762",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $(\"mensajes-agrupados1\").last().json.response }}",
+        "options": {
+          "systemMessage": "=Eres un asistente conversacional amable y claro. Responde de manera empática, cercana y útil a cualquier mensaje que te envíe el cliente. Usa un tono amigable, como si estuvieras ayudando a alguien por WhatsApp.\n\nResponde directamente a lo que la persona diga. Si hace una pregunta, contéstala con claridad. Si es un reclamo, responde con comprensión. Si pide información, dásela de forma ordenada.\n\nTu objetivo es que el cliente se sienta atendido y cómodo. Usa un lenguaje informal pero profesional, como si hablaras con alguien conocido. jamas uses comillas en el texto\n\nEste es el texto:\n\n\n\nademas de que puedes acceder a la memoria para saber los ultimos mensajes\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        96
+      ],
+      "id": "a7f3f844-8507-488f-a86c-bb64653111c7",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "content": "🧩 Subflow: Grouped Message Handler (by User Identifier with Redis)\nThis subflow is designed to collect multiple consecutive messages from the same user before generating a response. It's especially useful for platforms like WhatsApp (via Chatwoot), where users often send several short messages one after another. The flow avoids replying to each message individually and waits until the user finishes typing.\n\n🔧 How It Works:\n1. Redis-push-message\nStores the incoming message in a Redis list, using the user’s identifier (such as their WhatsApp number) as the key.\n\n2. Wait (20 seconds)\nAlthough not included in the current version of the flow, a wait node is typically added here to allow time for the user to send more messages. This gives the system a window to collect everything the user wants to say.\n\n3. Redis-get-messages\nAfter the delay, the flow retrieves all stored messages for that user from Redis.\n\n4. If\nChecks whether the last message in the list matches the current identifier. This is used as an indirect signal that the user has stopped typing.\n\n5. Edit Fields1\nIf the condition is met, all stored messages are combined into one string. This grouped message becomes the unified response.\n\n6. Redis2 (delete)\nOnce the final response is ready, the Redis list for that user is deleted. This clears the memory for the next interaction.\n\n7. No Operation\nIf the condition is not met, the flow does nothing and continues waiting for more messages.",
+        "height": 884,
+        "width": 920
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b02e019e-eb1f-488e-81c2-3bf6354ef711",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "message",
+        "key": "={{ $('sub-text').item.json.identifier }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        320,
+        656
+      ],
+      "id": "95c2fc73-c2ee-4f64-9220-cb0057ba09cc",
+      "name": "Redis-get-messages",
+      "credentials": {
+        "redis": {
+          "id": "1FzaeehQbe8TpxzI",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $('sub-text').item.json.identifier }}",
+        "messageData": "={{ $('sub-text').item.json.message }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        16,
+        656
+      ],
+      "id": "5b53d321-dcee-41fc-a98f-db9017f3da5f",
+      "name": "Redis-push-message",
+      "credentials": {
+        "redis": {
+          "id": "1FzaeehQbe8TpxzI",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('sub-text').item.json.identifier }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        800,
+        592
+      ],
+      "id": "4a026248-d71e-448a-a9af-df3dd732f90b",
+      "name": "Redis2",
+      "credentials": {
+        "redis": {
+          "id": "1FzaeehQbe8TpxzI",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        640,
+        736
+      ],
+      "id": "3a72d2cd-ab82-46e8-ac8f-6deb1294bcf2",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "307b7145-ffe4-4da8-b255-66c0d27d8e8e",
+              "leftValue": "={{ $json.message[0].trim()}}",
+              "rightValue": "={{ $('sub-text').item.json.message.trim()}}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        656
+      ],
+      "id": "164c3213-bb22-4d2f-bd4d-d98a89052715",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('sub-text').item.json.idjefetelegrm }}",
+        "text": "=un usuario solicita soporte el número es:\n{{ $('sub-text').item.json['numero-limpio'] }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1952,
+        816
+      ],
+      "id": "4e3738bd-0642-41a4-bacd-5fd33d3d7325",
+      "name": "Send a text message",
+      "webhookId": "29fc1a10-045a-4c1d-a288-62fc8485a7e7",
+      "credentials": {
+        "telegramApi": {
+          "id": "TYAzjxj9j4etWB5i",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('IA-text-router').item.json.output }}",
+                    "rightValue": "relevante",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "640cda58-2331-43fa-8d06-8657aab0bead"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "relevante"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d49ebf4b-2637-4a14-bc42-030c3e05ca5a",
+                    "leftValue": "={{ $('IA-text-router').item.json.output }}",
+                    "rightValue": "irrelevante",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "irrelevante"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2623e8d3-60ae-4a94-94ad-53658ef23b5c",
+                    "leftValue": "={{ $('IA-text-router').item.json.output }}",
+                    "rightValue": "error",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "error"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d49712f6-8028-412a-acca-7073c28f1f4f",
+                    "leftValue": "={{ $('IA-text-router').item.json.output }}",
+                    "rightValue": "insistencia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "insistencia"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "726e8e1b-2574-47c8-8966-ae445cc1571d",
+                    "leftValue": "={{ $('IA-text-router').item.json.output }}",
+                    "rightValue": "spam",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "spam"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a3771e11-5eac-4958-8e51-c91a96c46cba",
+                    "leftValue": "={{ $('IA-text-router').item.json.output }}",
+                    "rightValue": "=soporte",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "soporte"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b480449e-3708-48d2-9616-e46d5a230d36",
+                    "leftValue": "={{ $('IA-text-router').item.json.output }}",
+                    "rightValue": "agendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "agendar"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1536,
+        512
+      ],
+      "id": "3f772faf-e418-4b2a-8075-bf47a2f54ee8",
+      "name": "Switch2",
+      "alwaysOutputData": false,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": "moonshotai/kimi-k2-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        992,
+        784
+      ],
+      "id": "04d00e85-b58e-4939-b2c5-db18d4fa5024",
+      "name": "Groq Chat Model2",
+      "credentials": {
+        "groqApi": {
+          "id": "XpDEHPXQpV2b5yz1",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  message->>'type' AS role,\n  message->>'content' AS message\nFROM n8n_chat_histories\nWHERE session_id = '{{ $('sub-text').item.json.identifier }}'\nORDER BY id DESC\nLIMIT 20;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1136,
+        816
+      ],
+      "id": "b17ae664-3015-4e90-bd68-0622affe0ee0",
+      "name": "consultarhistorial",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO spam_numeros (identificador)\nVALUES ('{{$json[\"identifier\"]}}')\nON CONFLICT (identificador) DO NOTHING;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        656
+      ],
+      "id": "5e55d538-8677-4b1d-9dcd-b8d2e290f71a",
+      "name": "set-spam.",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO en_espera (identificador)\nVALUES ('{{ $json.message.split(\"@\")[0].slice(-9) }}')\nON CONFLICT (identificador)\nDO UPDATE SET identificador = EXCLUDED.identificador;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        816
+      ],
+      "id": "37b89944-f5a8-4357-8c6b-b3cb20bcaace",
+      "name": "set-soporte",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones_dia\nSET relevante = true\nWHERE identificador = '{{ $('sub-text').item.json['numero-limpio'] }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2400,
+        96
+      ],
+      "id": "b0854d31-ac8e-415a-8605-6138c81c6084",
+      "name": "registrar-estadistica",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones_dia\nSET soporte = true\nWHERE identificador = '{{ $('sub-text').item.json.identifier.replace(/\\D/g,'').slice(-9) }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2400,
+        816
+      ],
+      "id": "a52e9173-afa1-4714-a34a-721ca538655c",
+      "name": "registrar-estadistica1",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE conversaciones_dia\nSET spam = true\nWHERE identificador = '{{ $('sub-text').item.json.identifier.replace(/\\D/g,'').slice(-9) }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2400,
+        656
+      ],
+      "id": "1409188d-1b8b-44d5-bbb1-d63e4094c92d",
+      "name": "registrar-estadistica2",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 896,
+        "width": 208,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        80
+      ],
+      "id": "04127c50-faeb-4950-9663-f767d944e690",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "model": "moonshotai/kimi-k2-instruct-0905",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        256
+      ],
+      "id": "4f249af8-fad3-48cf-b762-842392afd48b",
+      "name": "Groq",
+      "credentials": {
+        "groqApi": {
+          "id": "XpDEHPXQpV2b5yz1",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('sub-text').item.json.identifier }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1856,
+        256
+      ],
+      "id": "4a7bc96e-0485-4668-8c4c-4cdba651e150",
+      "name": "memory",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "<set-your-url-here>"
+      },
+      "id": "5daf8de5-273d-47ad-bbec-36773106d546",
+      "name": "MCP Client",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "position": [
+        2032,
+        1264
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "83ed6bd3-517a-415a-9bd7-c65e6f11f9c1",
+      "name": "Personal Assistant",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1744,
+        1056
+      ],
+      "typeVersion": 1.9
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        1248
+      ],
+      "id": "c7f331ad-2857-49bf-b734-873047eaac51",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "XpDEHPXQpV2b5yz1",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('user-data').item.json.identifier }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1856,
+        1248
+      ],
+      "id": "a33f909b-aa02-4b23-89df-e4b8af122155",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "Ej15uHn97abrndN4",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "d",
+        "text": "=Event Name:  {{ $json.summary }}\nDescription: {{ $json.description }}\nEvent Location: {{ $json.location }}\nStart Date: {{ $json.start.dateTime }}\nEnd Date: {{ $json.end.dateTime }}\nCreator: {{ $json.creator.email }}\n\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "6064d258-6245-40f0-bfc3-4769185f86fe",
+      "name": "Send a text message1",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        2160,
+        1056
+      ],
+      "webhookId": "dbb6a96e-db3b-4827-9455-a91007b89616",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "TYAzjxj9j4etWB5i",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        656
+      ],
+      "id": "0f4b31e7-cf53-4c28-8084-9225d372d78b",
+      "name": "sub-text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e400a98f-4ba6-49c8-8a79-1d684d6bea8c",
+              "name": "identifier",
+              "value": "={{ $('sub-text').item.json.identifier }}",
+              "type": "string"
+            },
+            {
+              "id": "e08a048c-4ad6-492a-9fb8-0e46c452e3f7",
+              "name": "username",
+              "value": "={{ $('sub-text').item.json.username }}",
+              "type": "string"
+            },
+            {
+              "id": "2ea9113b-4509-40f6-b877-772c901b7bb3",
+              "name": "tipo",
+              "value": "={{ $('sub-text').item.json.tipo }}",
+              "type": "string"
+            },
+            {
+              "id": "e0791306-7cea-498a-84f2-17461fe83e4c",
+              "name": "instancia",
+              "value": "={{ $('sub-text').item.json.instancia }}",
+              "type": "string"
+            },
+            {
+              "id": "c78a1f0c-332e-4088-9aee-b53eacf44d1b",
+              "name": "url_server",
+              "value": "={{ $('sub-text').item.json.url_server }}",
+              "type": "string"
+            },
+            {
+              "id": "5db63f39-350e-4570-8746-166b8e42c1e7",
+              "name": "apikey",
+              "value": "={{ $('sub-text').item.json.apikey }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": false,
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        592
+      ],
+      "id": "0331dc73-3f06-4ba8-a436-2f7f21767272",
+      "name": "user-data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('mensajes-agrupados').item.json.response}}",
+        "options": {
+          "systemMessage": "=Eres un agente experto en clasificación de mensajes en un sistema automatizado de atención por WhatsApp.\n\n👉 Siempre debes usar la herramienta llamada `consultarhistorial` para recuperar el historial de mensajes del cliente. Esta herramienta devuelve hasta 40 mensajes recientes (campo `role` y `message`) del usuario identificado por su ID de sesión pero esto es solo una herramienta no una opcion.\n\n⚠️ Antes de clasificar, **debes ejecutar la herramienta `consultarhistorial` y usar sus resultados** para entender el contexto reciente de la conversación.\n\nTu tarea es **clasificar el último mensaje enviado por el cliente** (es decir, el mensaje más reciente con `role = \"user\"`) en **una sola de las siguientes categorías**:\n\n1. **soporte** → Si solicita ayuda, soporte técnico, asistencia, reporta un problema, quiere hablar con una persona real o escribe cosas como \"ayuda\", \"esto no sirve\", \"quiero hablar con alguien\". Esta categoría es **prioritaria y exclusiva**.\n\n2. **relevante** → Si el mensaje muestra intención, contiene una pregunta, solicitud, seguimiento, agradecimiento con duda o cualquier contenido que requiere respuesta. También aplica a saludos iniciales no repetidos practicamente el 99% seran relevante.\n\n3. **irrelevante** → Si el mensaje no aporta (ej. \"ok\", \"sí\", \"👍\", saludos repetidos, \"gracias\" sin contexto)\n\n4. **spam** → Si es publicidad no solicitada, promociones externas, cadenas, enlaces sospechosos, bots o repeticiones comerciales fuera de contexto.\n\n5. **insistencia** → Si el cliente repite lo mismo varias veces (ej. \"hola?\", \"ya escribí\", \"¿responde alguien?\") sin recibir respuesta, o aporta presión sin contenido nuevo. Analiza los últimos 5 mensajes.\n\n6. **error** → Si el mensaje está roto, incomprensible, vacío o no se entiende la intención.\n\n7. **agendar**si el mensaje te pide agendar cita o dentro de los ultimos mensajes esta el contexto de que estan agendando citas.\n\n🔵 Solo después de consultar el historial, determina la categoría más adecuada.\n\n🟡 **Responde con una sola palabra exacta**:  \n`soporte`, `relevante`, `irrelevante`, `spam`, `insistencia`, `error`, o `agendar`\n\nNo expliques nada. No devuelvas texto adicional. Solo una palabra exacta.\n y nunca uses comillas\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        592
+      ],
+      "id": "f273cbc8-6e85-444c-be1d-06b2b2ba5b42",
+      "name": "IA-text-router",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.17.42.196:8080/message/sendText/{{ $('sub-text').item.json.instancia }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('sub-text').item.json.apikey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('sub-text').item.json.identifier }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2096,
+        -144
+      ],
+      "id": "91682a6a-a9bd-42fc-825c-df0f9a4f0a21",
+      "name": "HTTP Request1"
+    }
+  ],
+  "pinData": {
+    "sub-text": [
+      {
+        "json": {
+          "message": "Hola",
+          "identifier": "593978729018@s.whatsapp.net",
+          "username": "Santiago David",
+          "tipo": "conversation",
+          "instancia": "hotel",
+          "url_server": "https://evolution.csuioups.org",
+          "apikey": "DF66549962FD-4360-818C-544B42B91AB9",
+          "numero-limpio": "978729018",
+          "idjefetelegrm": "6580829248"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "mensajes-agrupados": {
+      "main": [
+        [
+          {
+            "node": "Redis2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Redis-get-messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "registrar-estadistica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis-get-messages": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis-push-message": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis2": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "mensajes-agrupados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "registrar-estadistica1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send-irrelevante",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send-error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send-error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "set-spam.",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "set-soporte",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA-text-router",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultarhistorial": {
+      "ai_tool": [
+        [
+          {
+            "node": "IA-text-router",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set-spam.": {
+      "main": [
+        [
+          {
+            "node": "registrar-estadistica2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set-soporte": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sub-text": {
+      "main": [
+        [
+          {
+            "node": "Redis-push-message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "user-data": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA-text-router": {
+      "main": [
+        [
+          {
+            "node": "user-data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1fed6345-2ab8-4056-83a9-a19ea26263e6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1ba61dde2cd93cbe58daac983d4e6adbbd26cdb7234ab9094e5a6df0ba3f1063"
+  },
+  "id": "UCie7wQOq8bMlDt3",
+  "tags": []
+}
