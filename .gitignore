@@ -1,3 +1,30 @@
+# ================================
+# n8n Hotel Project
+# ================================
+
+# Environment variables (credentials, API keys)
+.env
+.env.*
+!.env.example
+
+# n8n local data and config
+.n8n/
+n8n-data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ================================
+# Node.js (generic)
+# ================================
+
 # Logs
 logs
 *.log
@@ -65,10 +92,7 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variable files
-.env
-.env.*
-!.env.example
+# dotenv environment variable files (see top of file)
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
